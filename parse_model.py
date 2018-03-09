@@ -17,10 +17,12 @@ def get_type(node):
     """Gets the immediate, top-level type of the node.
     """
     type_obj = node.search_one('type')
-    type_name = None
+    fq_type_name = None
     if type_obj is not None:
+        type_module = type_obj.i_orig_module.arg
         type_name = type_obj.arg
-    return type_name
+        fq_type_name = '%s:%s' % (type_module, type_name)
+    return fq_type_name
 
 def get_primitive_type(node):
     """Recurses through the typedefs and returns
@@ -38,6 +40,15 @@ def get_primitive_type(node):
     primitive_type = recurse_typedefs(type_obj)
     return primitive_type
 
+def get_description(node):
+    """Retrieves the description of the node if present.
+    """
+    description_obj = node.search_one('description')
+    description = None
+    if description is not None:
+        description = description_obj.arg
+    return description
+
 def recurse_children(node, module):
     """Recurses through module levels and extracts
     xpath, type, primitive types, and children.
@@ -47,11 +58,17 @@ def recurse_children(node, module):
     children = (child for child in node.i_children if child.keyword in statements.data_definition_keywords)
     parsed_children = {}
     for child in children:
-        xpath = statements.mk_path_str(child, with_prefixes=False)
-        fq_xpath = '%s:%s' % (module.arg, xpath[1:])
-        parsed_children[fq_xpath] = {
+        module_name = module.arg
+        prefixed_xpath = statements.mk_path_str(child, with_prefixes=True)
+        no_prefix_xpath = statements.mk_path_str(child, with_prefixes=False)
+        cisco_xpath = '%s:%s' % (module_name, no_prefix_xpath[1:])
+        parsed_children[cisco_xpath] = {
+            'module_name': module_name,
+            'xpath': prefixed_xpath,
+            'cisco_xpath': cisco_xpath,
             'type': get_type(child),
             'primitive_type': get_primitive_type(child),
+            'description': get_description(child),
             'children': recurse_children(child, module)
         }
     return parsed_children
