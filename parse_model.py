@@ -39,6 +39,9 @@ def get_primitive_type(node):
     return primitive_type
 
 def recurse_children(node, module):
+    """Recurses through module levels and extracts
+    xpath, type, primitive types, and children.
+    """
     if not hasattr(node, 'i_children'):
         return {}
     children = (child for child in node.i_children if child.keyword in statements.data_definition_keywords)
@@ -53,7 +56,7 @@ def recurse_children(node, module):
         }
     return parsed_children
 
-
+# Let's begin..
 base_data_dir = 'testdata/'
 model_filenames = ['Cisco-IOS-XR-ipv4-bgp-oper.yang']
 # Context has a dependency on Repository
