@@ -45,7 +45,7 @@ def get_description(node):
     """
     description_obj = node.search_one('description')
     description = None
-    if description is not None:
+    if description_obj is not None:
         description = description_obj.arg
     return description
 
