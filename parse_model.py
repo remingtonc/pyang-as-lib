@@ -32,9 +32,16 @@ def get_fq_type(node):
             # If type_obj has typedef, substitute.
             # Absolute module:type instead of prefix:type
             type_obj = type_obj.i_typedef
-        type_module = type_obj.i_orig_module.arg
         type_name = type_obj.arg
-        fq_type_name = '%s:%s' % (type_module, type_name)
+        if getattr(type_obj, 'i_type_spec', None):
+            # i_type_spec appears to indicate primitive type
+            # Make sure it isn't there and just null, though.
+            # It doesn't make sense to qualify a primitive type..
+            # ...........................................I think.
+            fq_type_name = type_name
+        else:
+            type_module = type_obj.i_orig_module.arg
+            fq_type_name = '%s:%s' % (type_module, type_name)
     return fq_type_name
 
 def get_primitive_type(node):
