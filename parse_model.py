@@ -17,8 +17,22 @@ def get_type(node):
     """Gets the immediate, top-level type of the node.
     """
     type_obj = node.search_one('type')
+    type_name = None
+    if type_obj is not None:
+        type_name = type_obj.arg
+    return type_name
+
+def get_fq_type(node):
+    """Gets the fully qualified, top-level type of the node.
+    This enters the typedef if defined instead of using the prefix
+    to ensure absolute distinction.
+    """
+    type_obj = node.search_one('type')
     fq_type_name = None
     if type_obj is not None:
+        if hasattr(type_obj, 'i_typedef'):
+            if type_obj.i_typedef is not None:
+                type_obj = type_obj.i_typedef
         type_module = type_obj.i_orig_module.arg
         type_name = type_obj.arg
         fq_type_name = '%s:%s' % (type_module, type_name)
@@ -66,7 +80,7 @@ def recurse_children(node, module):
             'module_name': module_name,
             'xpath': prefixed_xpath,
             'cisco_xpath': cisco_xpath,
-            'type': get_type(child),
+            'type': get_fq_type(child),
             'primitive_type': get_primitive_type(child),
             'description': get_description(child),
             'children': recurse_children(child, module)
@@ -152,5 +166,5 @@ for (epos, etag, eargs) in context.errors:
 parsed_modules = [recurse_children(module, module) for module in modules]
 if len(parsed_modules) == 1:
     parsed_modules = parsed_modules[0]
-with open('testout.json', 'w') as testout_fd:
+with open('testout2.json', 'w') as testout_fd:
     json.dump(parsed_modules, testout_fd)
