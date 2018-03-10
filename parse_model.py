@@ -17,10 +17,8 @@ def get_type(node):
     """Gets the immediate, top-level type of the node.
     """
     type_obj = node.search_one('type')
-    type_name = None
-    if type_obj is not None:
-        type_name = type_obj.arg
-    return type_name
+    # Return type value if exists
+    return getattr(type_obj, 'arg', None)
 
 def get_fq_type(node):
     """Gets the fully qualified, top-level type of the node.
@@ -30,12 +28,20 @@ def get_fq_type(node):
     type_obj = node.search_one('type')
     fq_type_name = None
     if type_obj is not None:
-        if hasattr(type_obj, 'i_typedef'):
-            if type_obj.i_typedef is not None:
-                type_obj = type_obj.i_typedef
-        type_module = type_obj.i_orig_module.arg
+        if getattr(type_obj, 'i_typedef', None):
+            # If type_obj has typedef, substitute.
+            # Absolute module:type instead of prefix:type
+            type_obj = type_obj.i_typedef
         type_name = type_obj.arg
-        fq_type_name = '%s:%s' % (type_module, type_name)
+        if getattr(type_obj, 'i_type_spec', None):
+            # i_type_spec appears to indicate primitive type
+            # Make sure it isn't there and just null, though.
+            # It doesn't make sense to qualify a primitive type..
+            # ...........................................I think.
+            fq_type_name = type_name
+        else:
+            type_module = type_obj.i_orig_module.arg
+            fq_type_name = '%s:%s' % (type_module, type_name)
     return fq_type_name
 
 def get_primitive_type(node):
@@ -43,29 +49,24 @@ def get_primitive_type(node):
     the most primitive YANG type defined.
     """
     type_obj = node.search_one('type')
-    primitive_type = None
-    def recurse_typedefs(node):
-        typedef = node.arg if node else None
-        if hasattr(node, 'i_typedef'):
-            typedef_obj = node.i_typedef
-            if typedef_obj:
-                typedef = get_primitive_type(typedef_obj)
-        return typedef
-    primitive_type = recurse_typedefs(type_obj)
-    return primitive_type
+    type_name = getattr(type_obj, 'arg', None)
+    typedef_obj = getattr(type_obj, 'i_typedef', None)
+    if typedef_obj:
+        type_name = get_primitive_type(typedef_obj)
+    return type_name
 
 def get_description(node):
     """Retrieves the description of the node if present.
     """
     description_obj = node.search_one('description')
-    description = None
-    if description_obj is not None:
-        description = description_obj.arg
-    return description
+    # Return description value if exists
+    return getattr(description_obj, 'arg', None)
 
 def recurse_children(node, module):
     """Recurses through module levels and extracts
-    xpath, type, primitive types, and children.
+    xpaths, fully qualified type, primitive type, description, and children.
+    Keep module name and fully qualified xpath intact, and also parse out the
+    Cisco xpaths which are cleaner albeit less absolute.
     """
     if not hasattr(node, 'i_children'):
         return {}
@@ -166,5 +167,5 @@ for (epos, etag, eargs) in context.errors:
 parsed_modules = [recurse_children(module, module) for module in modules]
 if len(parsed_modules) == 1:
     parsed_modules = parsed_modules[0]
-with open('testout2.json', 'w') as testout_fd:
+with open('testout.json', 'w') as testout_fd:
     json.dump(parsed_modules, testout_fd)
